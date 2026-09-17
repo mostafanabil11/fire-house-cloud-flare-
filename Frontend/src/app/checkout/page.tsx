@@ -238,7 +238,7 @@ export default function CheckoutPage() {
 
   if (cartError) return <div className="page-shell"><PageState title="We couldn't load your order" description="Your selections are saved. Please try again." onRetry={retryCart} /></div>;
   if (cartLoading && !cart.items.length) return <PageSkeleton />;
-  const guidance = !deliveryReady ? (user ? "Choose a delivery address to continue." : (!user && coupon && guestEmail.trim() === "" ? "Add your email to use this coupon, or remove it to continue." : "Complete your name, mobile number and address to continue.")) : !paymentReady ? "Enter your payment reference to continue." : settingsQuery.isError ? "Delivery pricing could not be loaded. Please retry." : total === null ? "Loading delivery pricing…" : !cartIsClean ? "Please review the changes to your order." : "Review your details before placing your order.";
+  const guidance = !deliveryReady ? (user ? (addressesQuery.data?.length ? "Choose a delivery address to continue." : "Add a delivery address to continue.") : (!user && coupon && guestEmail.trim() === "" ? "Add your email to use this coupon, or remove it to continue." : "Complete your name, mobile number and address to continue.")) : !paymentReady ? "Enter your payment reference to continue." : settingsQuery.isError ? "Delivery pricing could not be loaded. Please retry." : total === null ? "Loading delivery pricing…" : !cartIsClean ? "Please review the changes to your order." : "Review your details before placing your order.";
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-40 sm:px-6 lg:pb-16">
@@ -258,6 +258,8 @@ export default function CheckoutPage() {
                 addresses={addressesQuery.data ?? []}
                 selectedId={effectiveAddressId}
                 onSelect={setSelectedAddressId}
+                loading={addressesQuery.isLoading}
+                accountName={{ firstName: user.firstName, lastName: user.lastName }}
               />
             ) : (
               <DeliveryDetailsSection
