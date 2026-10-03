@@ -32,6 +32,15 @@ export const envSchema = z.object({
     ),
   
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters — generate one with `openssl rand -base64 48`'),
+
+  // Shared with the site's Cloudflare Worker, which proxies browser traffic
+  // here — it is what lets the Worker vouch for each customer's real address.
+  // See proxy-client-ip.middleware.ts. Optional: without it every customer
+  // shares one rate-limit allowance, which works until the site gets busy.
+  PROXY_SECRET: z
+    .string()
+    .min(32, 'PROXY_SECRET must be at least 32 characters — generate one with `openssl rand -base64 48`')
+    .optional(),
   JWT_EXPIRATION: z.string().default('15m'),
   JWT_REFRESH_EXPIRATION: z.string().default('7d'),
   

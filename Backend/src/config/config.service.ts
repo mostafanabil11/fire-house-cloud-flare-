@@ -42,7 +42,7 @@ export class ConfigService {
 
   // FRONTEND_URL may hold several comma-separated origins, because a deployed
   // site legitimately has more than one: the production domain, a custom
-  // domain, and Vercel's per-branch preview URLs. All of them need to pass
+  // domain, and per-branch preview URLs. All of them need to pass
   // CORS. The first entry is treated as canonical.
   get frontendUrls(): string[] {
     return this.configService
@@ -50,6 +50,10 @@ export class ConfigService {
       .split(',')
       .map(url => url.trim().replace(/\/$/, ''))
       .filter(Boolean);
+  }
+
+  get proxySecret(): string | undefined {
+    return this.configService.get<string>('PROXY_SECRET');
   }
 
   get isProduction(): boolean {

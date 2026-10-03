@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { ConfigService } from './config/config.service';
+import { proxyClientIp } from './common/middleware/proxy-client-ip.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -22,6 +23,10 @@ async function bootstrap() {
   if (configService.isProduction) {
     app.set('trust proxy', 1);
   }
+
+  // Ahead of everything that reads req.ip: browser traffic arrives through the
+  // site's Cloudflare Worker, and this restores each customer's own address.
+  app.use(proxyClientIp(configService.proxySecret));
 
   // Security Headers
   app.use(helmet());
