@@ -1,7 +1,8 @@
 # Render blueprint for the restaurant ordering API.
 #
-# The frontend is not here: it stays on Vercel. This file describes only the
-# NestJS backend, which needs a host that runs a persistent process — the
+# The frontend is not here: it runs on Cloudflare (see Frontend/wrangler.jsonc).
+# This file describes only the NestJS backend, which needs a host that runs a
+# persistent process — the
 # order and cart schedulers are in-process cron jobs (see orders.scheduler.ts),
 # and a serverless platform would never run them.
 #
@@ -9,7 +10,7 @@
 # are entered in the Render dashboard and never committed. See README.md.
 services:
   - type: web
-    name: restaurant-ordering-api
+    name: fire-house-api
     runtime: node
     plan: free
     region: frankfurt
@@ -41,13 +42,20 @@ services:
       #
       # MONGODB_URI   Atlas connection string (mongodb+srv://...)
       # JWT_SECRET    at least 32 chars — openssl rand -base64 48
-      # FRONTEND_URL  the Vercel site URL; accepts a comma-separated list so
-      #               preview deployments and a custom domain also pass CORS
+      # FRONTEND_URL  the site's URL (https://fire-house.<subdomain>.workers.dev);
+      #               accepts a comma-separated list, so a custom domain added
+      #               later can sit alongside it. The first entry is used for
+      #               links in emails and the redirects after sign-in/payment.
+      # PROXY_SECRET  the same value as the PROXY_SECRET secret on the
+      #               Cloudflare Worker — it lets the Worker pass on each
+      #               customer's real address for rate limiting
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
+        sync: false
+      - key: PROXY_SECRET
         sync: false
 
       - key: JWT_EXPIRATION

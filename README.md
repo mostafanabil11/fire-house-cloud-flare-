@@ -65,23 +65,26 @@ environment on boot and refuses to start with an invalid config.
 Create `Frontend/.env.local`:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3100
+API_ORIGIN=http://localhost:3100
 NEXT_PUBLIC_SITE_URL=http://localhost:3101
 ```
 
 ### Seed the database
 
-Categories must be seeded before products, since products resolve their category
-by slug.
+One command loads the categories and the whole menu. It **empties the catalog
+first** — products, categories, carts, reviews — so it prints which database it
+connected to before touching anything; check that line.
 
 ```bash
 cd Backend
-npm run seed:categories
-npm run seed:products
+npm run seed:menu:inspect   # read-only: shows what is there
+npm run seed:menu           # replaces the menu
+npm run create:admin        # creates the restaurant's admin account
 ```
 
-Product image URLs are built from `FRONTEND_URL` at seed time, so set that to the
-right origin before seeding.
+Both scripts read `MONGODB_URI` from the environment first, then
+`Backend/.env.local`, then `Backend/.env`, so a database can be named on the
+command line: `MONGODB_URI="mongodb+srv://..." npm run seed:menu`.
 
 ## Running
 
@@ -94,6 +97,20 @@ cd Backend && npm run start:dev    # http://localhost:3100
 
 ```bash
 cd Frontend && npm run dev         # http://localhost:3101
+```
+
+To run the site exactly as Cloudflare will — the real Workers runtime, the
+`/api/backend` proxy in `worker.ts`, the page cache — build and preview it:
+
+```bash
+cd Frontend && npm run preview     # http://localhost:8787
+```
+
+The preview's Worker reads `Frontend/.dev.vars` (not committed):
+
+```bash
+API_ORIGIN=http://localhost:3100
+PROXY_SECRET=<the same value as PROXY_SECRET in Backend/.env.local>
 ```
 
 Swagger docs are served at `http://localhost:3100/api` in non-production
@@ -113,26 +130,50 @@ abandoned card checkouts every minute) which need a host that keeps a process
 alive. A serverless platform would never run them, and inventory reserved by an
 abandoned checkout would never come back.
 
-- **Frontend → Vercel.** Root directory `Frontend`.
+- **Frontend → Cloudflare Workers** (free plan), via the OpenNext adapter.
+  Config: `Frontend/wrangler.jsonc`, `Frontend/open-next.config.ts`,
+  `Frontend/worker.ts`. Needs no payment method on the Cloudflare account.
 - **Backend → Render.** See `render.yaml`; it deploys `Backend` as a web service.
 - **Database → MongoDB Atlas.** A cloud backend cannot reach a database on your
-  laptop, so local MongoDB is development-only.
+  laptop, so local MongoDB is development-only. Under *Network Access*, allow
+  `0.0.0.0/0`: Render's free instances have no fixed address.
 
-### Moving the database to Atlas
+### First deploy, in order
 
-Create a free M0 cluster, add a database user, and allow network access. Then
-copy the local data up:
+The site and the API each need the other's address, so the order matters.
 
-```bash
-cd Backend
-SOURCE_URI="mongodb://localhost:27017/restaurant-ordering" \
-TARGET_URI="mongodb+srv://USER:PASS@CLUSTER.mongodb.net/restaurant-ordering" \
-node scripts/migrate-database.js
-```
+1. **Pick the site's address.** It will be
+   `https://fire-house.<your-subdomain>.workers.dev` — the subdomain is shown in
+   the Cloudflare dashboard under *Workers & Pages*.
+2. **Generate the proxy secret** — one value, used on both sides:
+   `openssl rand -base64 48`.
+3. **Render:** *New → Blueprint*, choose this repository. Fill in the
+   `sync:false` variables (table below), with `FRONTEND_URL` set to the site
+   address from step 1. Note the service URL once it is live.
+4. **Seed the new database** from your machine — see *Seed the database* above.
+5. **Fill in `vars` in `Frontend/wrangler.jsonc`** — `API_ORIGIN` (the Render
+   URL) and `NEXT_PUBLIC_SITE_URL` (step 1) — then commit and push.
+6. **Cloudflare:**
+   - *Storage & databases → Workers KV → Create* a namespace named
+     `fire-house-next-cache`, and paste its ID into `kv_namespaces` in
+     `wrangler.jsonc`. (KV rather than R2 because R2 needs a payment method on
+     the account; KV does not.)
+   - *Workers & Pages → Create → Import a repository*. Project name
+     `fire-house` (it must match `name` in `wrangler.jsonc`), root directory
+     `Frontend`, build command `npx opennextjs-cloudflare build`, deploy
+     command `npx opennextjs-cloudflare deploy`.
+   - After it exists: *Settings → Variables and Secrets*, add `PROXY_SECRET` as
+     a **Secret** with the value from step 2, and redeploy.
+7. **GitHub:** add the repository secret `API_HEALTH_URL` =
+   `<Render URL>/health`, for `.github/workflows/keep-api-awake.yml`.
 
-Re-running is safe — documents are matched on `_id` and replaced. Pass `--drop`
-to make the target mirror the source exactly. Indexes are not copied; the app
-builds them from its Mongoose schemas on first start.
+Optional, once the rest works:
+
+- **Google sign-in:** `GOOGLE_CALLBACK_URL` =
+  `<site>/api/backend/auth/google/callback`, and add the same URL to the OAuth
+  client's authorized redirect URIs in Google Cloud Console.
+- **Paymob:** transaction processed callback `<Render URL>/payments/paymob/webhook`,
+  transaction response callback `<Render URL>/payments/paymob/return`.
 
 ### Environment variables
 
@@ -142,19 +183,35 @@ On Render (`render.yaml` lists the rest; these are the ones marked `sync:false`)
 | --- | --- |
 | `MONGODB_URI` | the Atlas connection string |
 | `JWT_SECRET` | 32+ chars — `openssl rand -base64 48` |
-| `FRONTEND_URL` | the Vercel site URL; comma-separate several to allow preview domains |
+| `FRONTEND_URL` | the site URL; comma-separate several to allow a custom domain too |
+| `PROXY_SECRET` | the same value as the Cloudflare secret below |
 | `BREVO_API_KEY` | see *Email in production* below |
 | `MAIL_FROM_ADDRESS` | the sender address verified with Brevo |
 
-On Vercel:
+On Cloudflare — public values in `Frontend/wrangler.jsonc` under `vars`, the
+secret in the dashboard:
 
-| Variable | Value |
-| --- | --- |
-| `NEXT_PUBLIC_API_URL` | the Render service URL |
-| `NEXT_PUBLIC_SITE_URL` | the Vercel site URL |
+| Variable | Where | Value |
+| --- | --- | --- |
+| `API_ORIGIN` | `wrangler.jsonc` | the Render service URL |
+| `NEXT_PUBLIC_SITE_URL` | `wrangler.jsonc` | the site URL |
+| `PROXY_SECRET` | dashboard, type *Secret* | the same value as on Render |
 
-`FRONTEND_URL` and `NEXT_PUBLIC_API_URL` point at each other. Getting either
-wrong shows up as a CORS error in the browser rather than a failed build.
+`FRONTEND_URL` and `API_ORIGIN` point at each other. A build with either
+`wrangler.jsonc` value empty fails and names the missing one.
+
+### How the browser reaches the API
+
+The browser never calls Render directly. It calls `/api/backend/*` on the site
+itself, and `Frontend/worker.ts` forwards that to `API_ORIGIN`. That keeps the
+session cookie first-party — Safari drops third-party cookies, which would sign
+people out on every refresh — and it runs ahead of Next.js, so API calls cost
+almost none of the free plan's per-request CPU.
+
+Because every forwarded request reaches Render from a Cloudflare address, the
+Worker also sends each customer's real address with `PROXY_SECRET`, and
+`proxy-client-ip.middleware.ts` restores it as `req.ip`. Without the secret the
+rate limiter would count every customer as one caller.
 
 ### Email in production
 
@@ -178,25 +235,21 @@ guesswork.
 
 ### Why the cookies change in production
 
-Auth cookies are `SameSite=Lax` in development, where the site and API share
-`localhost` and are therefore same-site. Deployed they sit on different domains,
-which makes every request cross-site, and a Lax cookie is not sent on those —
-login would appear to succeed and every request after it would arrive signed
-out. `AuthController` switches to `SameSite=None; Secure` when `NODE_ENV` is
-`production`, which browsers only accept over HTTPS. Both hosts serve HTTPS, so
-this works, but it does mean the API cannot be tested over plain HTTP in
-production mode.
+Auth cookies are `SameSite=Lax` in development and `SameSite=None; Secure` when
+`NODE_ENV` is `production`, which browsers only accept over HTTPS. Behind the
+`/api/backend` proxy the cookies are first-party either way; `None` matters only
+for anything calling the API from another site. It does mean the API cannot be
+tested over plain HTTP in production mode.
 
 ## Notes
 
-Product and category images are served by the frontend itself out of
-`Frontend/public/images`, as root-relative paths. Nothing is fetched from another
-origin, so `next.config.ts` needs no `remotePatterns` — deployed, Vercel serves
-and optimizes these files like any other static asset. Moving the photos to an
-image host later means adding that host to `remotePatterns`.
-
-`products_imgs/` at the repo root holds the original source photography and is
-not used at runtime.
+Menu photos are served by the site itself out of `Frontend/public/images`, as
+root-relative paths stored in the database. The originals live in
+`Frontend/image-sources/`; `npm run images` (in `Frontend`) turns them into
+WebP copies at each width `next/image` asks for, and a custom loader
+(`src/lib/image-loader.ts`) picks the right one. Cloudflare's free plan has no
+image optimizer, so this is done once, ahead of time — run it after adding or
+replacing a photo.
 
 ## Troubleshooting
 

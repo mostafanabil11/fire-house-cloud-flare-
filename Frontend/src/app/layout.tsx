@@ -9,9 +9,12 @@ import "./globals.css";
 
 const manrope = localFont({ src: "./fonts/Manrope.ttf", variable: "--font-manrope", display: "swap", weight: "200 800" });
 const arabic = localFont({ src: "./fonts/NotoSansArabic.ttf", variable: "--font-arabic", display: "swap", weight: "100 900", preload: false });
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3101");
-const socialPreviewImage = "/images/restaurant/hero.png?v=20260916";
+// next.config.ts refuses a production build without NEXT_PUBLIC_SITE_URL, so
+// the localhost fallback only ever applies in development.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3101";
+// A small JPEG rather than the hero itself: WhatsApp drops previews whose image
+// is much over 300 KB, and the 2 MB hero PNG was well past that.
+const socialPreviewImage = "/images/og.jpg";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -25,8 +28,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: socialPreviewImage,
-        width: 1672,
-        height: 941,
+        width: 1200,
+        height: 630,
         alt: "Burgers, crispy chicken and loaded fries",
       },
     ],

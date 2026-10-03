@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { serverFetch, serverFetchOptional } from "./server-fetch";
+import { CATALOG_REVALIDATE_SECONDS, serverFetch, serverFetchOptional } from "./server-fetch";
 import type { Product, ProductDetail, ProductListParams, Pagination } from "@/types/product";
 
 interface ApiEnvelope<T> {
@@ -117,7 +117,7 @@ export async function bulkAdjustStock(
 // Not optional: a product page has nothing to render without its product, so
 // a failure here should surface rather than silently become a 404.
 export async function getProductBySlugServer(slug: string): Promise<ProductDetail | null> {
-  const res = await serverFetch(`/products/${slug}`, { revalidate: 300 });
+  const res = await serverFetch(`/products/${slug}`, { revalidate: CATALOG_REVALIDATE_SECONDS });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Failed to fetch product "${slug}": ${res.status}`);
   const body: ApiEnvelope<ProductDetail> = await res.json();
@@ -160,7 +160,7 @@ export async function getMenuServer(): Promise<Product[]> {
   for (let page = 1; page <= MENU_MAX_PAGES; page += 1) {
     const body = await serverFetchOptional<ApiListEnvelope<Product> | null>(
       `/products?limit=${MENU_PAGE_SIZE}&page=${page}`,
-      { revalidate: 300 },
+      { revalidate: CATALOG_REVALIDATE_SECONDS },
       null,
     );
     if (!body) break;
@@ -177,7 +177,7 @@ export async function getMenuServer(): Promise<Product[]> {
 export async function getBestSellersServer(): Promise<Product[]> {
   const body = await serverFetchOptional<ApiEnvelope<Product[]> | null>(
     '/products/best-sellers',
-    { revalidate: 300 },
+    { revalidate: CATALOG_REVALIDATE_SECONDS },
     null,
   );
   return body?.data ?? [];

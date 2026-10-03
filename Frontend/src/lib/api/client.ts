@@ -1,9 +1,10 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-// Same-origin on purpose. next.config.ts rewrites /api/backend/* to the real
-// API, so the session cookie belongs to this site rather than to a third-party
-// domain — see the comment there for why that distinction decides whether
-// staying signed in works at all on Safari and, soon, Chrome.
+// Same-origin on purpose. worker.ts proxies /api/backend/* to the real API
+// (next.config.ts rewrites it under `next dev`), so the session cookie belongs
+// to this site rather than to a third-party domain — see the comment in
+// worker.ts for why that decides whether staying signed in works at all on
+// Safari and, soon, Chrome.
 //
 // Server Components do not come through here; they call the API directly via
 // lib/api/server-fetch.ts, where there is no browser and so no cookie question.

@@ -18,6 +18,17 @@
 // where an idle free-tier host takes the better part of a minute to wake. The
 // nav would time out, fall back to empty, and that empty render then sat in the
 // cache — a working API serving a category menu that wasn't there.
+// How long catalog data and the pages built from it (home, menu, each dish)
+// are served from cache before being refreshed in the background.
+//
+// Ten minutes is set by the cache's budget, not by how often the menu changes.
+// Deployed, the page cache lives in Cloudflare Workers KV, whose free plan
+// allows 1,000 writes a day, and every refresh writes the page plus the API
+// responses it was built from. Five minutes could pass that on a busy day; ten
+// stays well under it. (Prices are not at stake: the cart and checkout always
+// re-read them from the API.)
+export const CATALOG_REVALIDATE_SECONDS = 600;
+
 const BUILD_TIMEOUT_MS = 8000;
 const RUNTIME_TIMEOUT_MS = 20000;
 
@@ -62,10 +73,11 @@ export async function serverFetch(
   path: string,
   { revalidate, timeoutMs = defaultTimeout() }: ServerFetchOptions,
 ): Promise<Response> {
-  // Straight to the API, not through the /api/backend rewrite the browser
-  // uses: there is no cookie or CORS question server-side, and looping back
-  // through this app's own origin would just add a hop.
-  const baseUrl = process.env.API_ORIGIN ?? process.env.NEXT_PUBLIC_API_URL;
+  // Straight to the API, not through the /api/backend proxy the browser uses:
+  // there is no cookie or CORS question server-side, and looping back through
+  // this app's own origin would just add a hop. `||` rather than `??` because
+  // an empty variable is an unfilled one, not a configured empty origin.
+  const baseUrl = process.env.API_ORIGIN || process.env.NEXT_PUBLIC_API_URL;
 
   // Explicit rather than letting the URL become the string "undefined/..." and
   // failing several frames away from the actual mistake.

@@ -1,0 +1,69 @@
+// Cloudflare Worker configuration — the site runs on Cloudflare's free plan.
+// OpenNext (npm run deploy) builds Next.js into .open-next/, and worker.ts
+// wraps that build; see the comments there.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fire-house",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // The site's public addresses — not secrets, so they live here, in one place.
+  // next.config.ts copies them into the build as well. Fill both in before the
+  // first deploy; an empty one fails the build with a message saying which.
+  //
+  // API_ORIGIN            the NestJS API on Render, e.g. https://fire-house-api.onrender.com
+  // NEXT_PUBLIC_SITE_URL  this site, e.g. https://fire-house.<your-subdomain>.workers.dev
+  //
+  // The one secret, PROXY_SECRET, is set in the Cloudflare dashboard (Settings →
+  // Variables and Secrets, type Secret) and must match PROXY_SECRET on Render.
+  "vars": {
+    "API_ORIGIN": "",
+    "NEXT_PUBLIC_SITE_URL": ""
+  },
+
+  // OpenNext's page cache. Server-rendered pages (home, menu, each dish) are
+  // stored in Workers KV and refreshed in the background, so a visitor is
+  // served the stored copy instantly even while the Render API is still waking
+  // up. Create the namespace once (dashboard → Storage & databases → Workers
+  // KV → Create) and add its ID here as "id": "<the ID>".
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV"
+    }
+  ],
+
+  // Runs those background refreshes, at most one per page at a time.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOQueueHandler"]
+    }
+  ],
+
+  // The page cache refreshes a page by calling this same Worker.
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "fire-house"
+    }
+  ],
+
+  // Logs in the dashboard (Workers → fire-house → Logs). Free up to a daily cap.
+  "observability": {
+    "enabled": true
+  }
+}

@@ -7,7 +7,7 @@ export function SiteFooter() {
   return <footer className="mt-auto bg-foreground text-background">
     <div className="mx-auto max-w-7xl px-5 pt-10 pb-24 sm:px-6 md:pb-7">
       <div className="grid gap-8 md:grid-cols-[1.6fr_1fr_1fr] md:gap-16">
-        <div><p className="flex items-center gap-2.5 font-heading text-2xl"><span className="grid size-9 place-items-center rounded-xl bg-background"><Image src="/images/brand/fire-house-mark.png" alt="" width={28} height={28} className="size-7 object-contain" /></span><T>{RESTAURANT.name}</T></p><p className="mt-3 max-w-xs text-sm leading-7 text-background/65"><T>Good food, made your way. Order directly from our kitchen for your next favourite meal.</T></p></div>
+        <div><p className="flex items-center gap-2.5 font-heading text-2xl"><span className="grid size-9 place-items-center rounded-xl bg-background"><Image src="/images/brand/fire-house-mark.webp" alt="" width={28} height={28} className="size-7 object-contain" /></span><T>{RESTAURANT.name}</T></p><p className="mt-3 max-w-xs text-sm leading-7 text-background/65"><T>Good food, made your way. Order directly from our kitchen for your next favourite meal.</T></p></div>
         <div className="grid grid-cols-2 gap-6 md:contents">
           <FooterColumn title="Your next meal" links={[["/menu","Menu"],["/cart","Your order"],["/track-order","Track order"],["/account/orders","My orders"]]} />
           <FooterColumn title="Here to help" links={[["/contact","Contact"],["/faq","FAQ"],["/shipping-returns","Delivery information"]]} />

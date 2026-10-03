@@ -11,7 +11,7 @@ export default async function Home() {
   return <div className="pb-16">
     <section className="px-4 pt-4 sm:px-6 sm:pt-6">
       <div className="relative mx-auto min-h-[460px] max-w-7xl overflow-hidden rounded-[2rem] bg-foreground sm:min-h-[520px] lg:min-h-[570px]">
-        <Image src="/images/restaurant/hero.png" alt="Burgers, crispy chicken and loaded fries" fill priority sizes="(max-width: 1280px) 100vw, 1280px" className="object-cover object-[center_35%] sm:object-center" />
+        <Image src="/images/restaurant/hero.webp" alt="Burgers, crispy chicken and loaded fries" fill priority sizes="(max-width: 1280px) 100vw, 1280px" className="object-cover object-[center_35%] sm:object-center" />
         {/* Bottom-up scrim on phones, where the copy spans the full width; a
             side scrim from sm up, so the food stays visible beside the text.
             The side scrim flips in RTL because the copy moves to the right. */}

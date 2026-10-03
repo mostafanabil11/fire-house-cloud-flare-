@@ -32,7 +32,7 @@ export function AuthShell({
     <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
       <div className="relative hidden lg:block">
         <Image
-          src="/images/restaurant/menu-hero.png"
+          src="/images/restaurant/menu-hero.webp"
           alt=""
           fill
           className="object-cover"

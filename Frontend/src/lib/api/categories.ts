@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { serverFetchOptional } from "./server-fetch";
+import { CATALOG_REVALIDATE_SECONDS, serverFetchOptional } from "./server-fetch";
 import type { Category } from "@/types/category";
 
 interface ApiEnvelope<T> {
@@ -54,16 +54,16 @@ export async function reorderCategories(items: { id: string; displayOrder: numbe
 // Optional: this feeds the nav menu, which renders on the layout and therefore
 // on every page. A missing menu is a degraded page; a thrown error is no page.
 //
-// Revalidated every five minutes rather than hourly, despite categories almost
-// never changing. The interval is not about freshness — it is the blast radius
-// of a failed fetch. Falling back to an empty list means an empty nav gets
-// rendered and then *cached*, so an hour-long window turned one unlucky moment
-// into an hour of a site with no navigation. Five minutes bounds that, and
-// re-fetching a tiny payload that often costs nothing.
+// Revalidated on the catalog's short interval rather than hourly, despite
+// categories almost never changing. The interval is not about freshness — it is
+// the blast radius of a failed fetch. Falling back to an empty list means an
+// empty nav gets rendered and then *cached*, so an hour-long window turned one
+// unlucky moment into an hour of a site with no navigation. A few minutes
+// bounds that, and re-fetching a tiny payload that often costs nothing.
 export async function getCategoryTreeServer(): Promise<Category[]> {
   const body = await serverFetchOptional<ApiEnvelope<Category[]> | null>(
     '/categories',
-    { revalidate: 300 },
+    { revalidate: CATALOG_REVALIDATE_SECONDS },
     null,
   );
   return body?.data ?? [];
