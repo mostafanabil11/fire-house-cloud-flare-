@@ -4,8 +4,14 @@ import { Category, CategorySchema } from '../../categories/schemas/category.sche
 import { Product, ProductSchema } from '../../products/schemas/product.schema';
 import { slugify } from '../../common/utils/slugify.util';
 
+// Same precedence the app uses: the real environment, then .env.local, then
+// .env — dotenv never overwrites a variable that is already set. This used to
+// load .env.local with override: true, which made
+// `MONGODB_URI=<new database> npm run seed:menu` quietly ignore the database
+// named on the command line and replace the menu in whichever one .env.local
+// pointed at.
+dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
-dotenv.config({ path: '.env.local', override: true });
 
 const categories = [
   { name: 'Main Items', description: 'Fire House burgers, sandwiches, and meals.', displayOrder: 1 },
@@ -430,6 +436,10 @@ async function run() {
   if (!uri) throw new Error('MONGODB_URI is not configured');
 
   await mongoose.connect(uri);
+  // Named before anything is touched — --replace-menu empties the catalog, and
+  // the moment to notice it's the wrong database is before that, not after.
+  const { host, name } = mongoose.connection;
+  console.log(`Connected to database "${name}" on ${host}`);
   try {
     await inspectCatalog();
     if (process.argv.includes('--replace-menu')) {
