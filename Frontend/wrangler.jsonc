@@ -23,8 +23,8 @@
   // The one secret, PROXY_SECRET, is set in the Cloudflare dashboard (Settings →
   // Variables and Secrets, type Secret) and must match PROXY_SECRET on Render.
   "vars": {
-    "API_ORIGIN": "",
-    "NEXT_PUBLIC_SITE_URL": ""
+    "API_ORIGIN": "https://fire-house-api.onrender.com",
+    "NEXT_PUBLIC_SITE_URL": "https://fire-house.mostafa-nabil-arafa01.workers.dev"
   },
 
   // OpenNext's page cache. Server-rendered pages (home, menu, each dish) are
@@ -34,7 +34,8 @@
   // KV → Create) and add its ID here as "id": "<the ID>".
   "kv_namespaces": [
     {
-      "binding": "NEXT_INC_CACHE_KV"
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "3e652d5618c5446da66579603fa0c9d8"
     }
   ],
 
